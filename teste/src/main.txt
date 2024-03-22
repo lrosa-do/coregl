@@ -1,0 +1,309 @@
+#include "Core.hpp"
+#include "Screen.hpp"
+#include "Camera.hpp"
+
+
+
+const int screenWidth = 1280;
+const int screenHeight = 720;
+
+
+ScreenManger* ScreenManger::instance = nullptr;
+
+// camera
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = screenWidth / 2.0f;
+float lastY = screenHeight / 2.0f;
+float mouseDeltaX = 0.0f;
+float mouseDeltaY = 0.0f;
+bool firstMouse = true;
+bool IsMouseDown = false;
+
+
+class DemoMesh : public Screen
+{
+    public:
+    DemoMesh() : Screen("DemoMesh")
+    {
+      
+    }   
+    
+    void Load()
+    {
+          glCullFace(GL_BACK);
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+
+    
+    const char* vShader = GLSL(
+        layout(location = 0) in vec3 position;
+        layout(location = 1) in vec2 texCoord;
+
+                
+
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
+
+        out vec2 TexCoord;
+        void main()
+        {
+            gl_Position =  projection * view * model * vec4(position, 1.0);
+            TexCoord = texCoord;
+        }
+    );
+
+
+    const char* fShader = GLSL(
+        in vec2 TexCoord;
+        out vec4 color;
+        uniform sampler2D texture0;
+        void main()
+        {
+            color = texture(texture0, TexCoord);
+        }
+    );
+
+    shader.Create(vShader, fShader);
+    shader.LoadDefaults();
+
+    texture.Load("assets/wall.jpg");
+
+
+
+
+      VertexFormat::Element elements[] =
+    {
+        VertexFormat::Element(VertexFormat::POSITION, 3),
+        VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
+    };
+
+   
+
+
+
+
+
+
+
+
+      glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+      shader.SetUniformMat4("projection", projection);
+
+
+      cube  = MeshBuilder::CreateCube(VertexFormat(elements, 2), 1.0);
+      cube->AddMaterial(new TextureMaterial( &texture));
+
+      plane = MeshBuilder::CreatePlane(VertexFormat(elements, 2), 15,15, 5, 5);
+      plane->AddMaterial(new TextureMaterial( &texture));
+
+      sphere = MeshBuilder::CreateSphere(VertexFormat(elements, 2), 20, 20);
+      sphere->AddMaterial(new TextureMaterial( &texture));
+
+      cylinder = MeshBuilder::CreateCylinder(VertexFormat(elements, 2), 20, 20);
+      cylinder->AddMaterial(new TextureMaterial( &texture));
+
+      cone = MeshBuilder::CreateCone(VertexFormat(elements, 2), 20, 20);
+      cone->AddMaterial(new TextureMaterial( &texture));
+
+      torus = MeshBuilder::CreateTorus(VertexFormat(elements, 2), 20, 20, 0.5, 1.0);
+      torus->AddMaterial(new TextureMaterial( &texture));
+
+    }
+    void Close()
+    {
+ std::cout << "SampleScreen Close" << std::endl;
+    shader.Release();
+    texture.Release();
+
+    delete cube;
+    delete plane;
+    delete cylinder;
+    delete sphere;
+    delete cone;
+    delete torus;
+    }
+
+    void Render()
+    {
+      
+
+
+
+
+        shader.Use();
+
+
+         glm::mat4 view = camera.GetViewMatrix();
+         shader.SetUniformMat4("view", view);
+
+   
+
+
+
+            glm::mat4 model = glm::mat4(1.0f);
+ 
+       
+
+            model =  glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-2.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, glm::radians((float)GetTime()), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetUniformMat4("model", model);
+            cube->Render(&shader, GL_TRIANGLES);
+           
+           
+            model =  glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(2.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, glm::radians((float)GetTime()*200), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetUniformMat4("model", model);
+            sphere->Render(&shader, GL_TRIANGLES);
+
+            model =  glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 1.0f, 1.0f));
+            model = glm::rotate(model, glm::radians((float)GetTime()*200), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetUniformMat4("model", model);
+            cylinder->Render(&shader, GL_TRIANGLES);
+
+            model =  glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-1.0f, 1.0f, -1.0f));
+            model = glm::rotate(model, glm::radians((float)GetTime()*200), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetUniformMat4("model", model);
+            cone->Render(&shader, GL_TRIANGLES);
+
+            model =  glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(1.0f, 1.0f, 1.0f));
+            model = glm::rotate(model, glm::radians((float)GetTime()*200), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetUniformMat4("model", model);
+            torus->Render(&shader, GL_TRIANGLES);
+
+
+    }
+
+
+  
+  private:
+    Texture2D texture;
+    Shader shader;
+    Mesh *cube;
+    Mesh *plane;
+    Mesh *sphere;
+    Mesh *torus;
+      Mesh *cylinder;
+      Mesh *cone;
+
+
+
+};
+
+
+
+int main(int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+    
+    Device* device= CreateDevice( screenWidth, screenHeight, "Sample",false);
+    
+
+    ScreenManger* screenManager = new ScreenManger(screenWidth, screenHeight);
+
+    DemoMesh* demoMesh = new DemoMesh();
+    screenManager->AddScreen(demoMesh);
+    screenManager->SetScreen("DemoMesh");
+
+
+    State::SetClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+
+  while (device->Run()) 
+  {
+   
+
+   
+         float deltaTime =  device->GetFrameTime();
+         //double timer    =  device->GetTime();
+
+        State::Clear();
+
+ 
+
+               
+
+
+
+
+         if (Keyboard::Down(KEY_W))
+         {
+             camera.ProcessKeyboard(FORWARD, deltaTime);
+         } 
+         if (Keyboard::Down(KEY_S))
+         {
+             camera.ProcessKeyboard(BACKWARD, deltaTime);
+         }
+         if (Keyboard::Down(KEY_A))
+         {
+        camera.ProcessKeyboard(LEFT, deltaTime);
+      }
+      
+         if (Keyboard::Down(KEY_D))
+         {
+             camera.ProcessKeyboard(RIGHT, deltaTime);
+         }
+
+
+                 int xposIn, yposIn;
+                u32 IsMouseDown = SDL_GetMouseState(&xposIn, &yposIn);
+
+
+                  if ( IsMouseDown & SDL_BUTTON(SDL_BUTTON_LEFT) )
+                  {
+
+                         
+                       
+                          float xpos = static_cast<float>(xposIn);
+                          float ypos = static_cast<float>(yposIn);
+
+                          if (firstMouse)
+                          {
+                              lastX = xpos;
+                              lastY = ypos;
+                              firstMouse = false;
+                          }
+
+                          float xoffset = xpos - lastX;
+                          float yoffset = lastY - ypos; 
+
+                          lastX = xpos;
+                          lastY = ypos;
+
+                       camera.ProcessMouseMovement(xoffset, yoffset);
+
+
+                  }
+                  else
+                  {
+                      firstMouse = true;
+                  }
+
+
+
+
+                   screenManager->Update(deltaTime);
+                   screenManager->Render();
+  
+
+                  device->Swap();  
+
+   
+   
+ 
+  } 
+
+   
+  delete screenManager;
+
+    device->Drop();
+
+
+    return 0;
+}
